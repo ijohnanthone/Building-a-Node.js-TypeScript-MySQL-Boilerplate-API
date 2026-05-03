@@ -3,9 +3,10 @@
     "host": "localhost",
     "port": 3306,
     "user": "root",
-    "password": "your_mysql_password",
+    "password": "admin1234", 
     "database": "node_mysql_api"
-  },
+  
+},
   "secret": "SUPER_SECRET_KEY_REPLACE_ME_IN_PRODUCTION",
   "emailFrom": "info@my-node-api.com",
   "smtpOptions": {
