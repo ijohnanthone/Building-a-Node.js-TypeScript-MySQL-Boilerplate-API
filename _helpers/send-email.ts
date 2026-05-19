@@ -1,5 +1,9 @@
 import nodemailer from 'nodemailer';
 import config from '../config.json';
+import dns from 'dns';
+
+// Force IPv4 for Render environments where IPv6 SMTP is unreachable
+dns.setDefaultResultOrder('ipv4first');
 
 export default async function sendEmail({ to, subject, html, from }: any) {
     // Read from environment variables if set, otherwise fall back to config.json
