@@ -71,21 +71,30 @@ async function revokeToken({ token, ipAddress }: any) {
 }
 
 async function register(params: any, origin: any) {
+    console.log('[DEBUG] Starting register for:', params.email);
     if (await db.Account.findOne({ where: { email: params.email } })) {
+        console.log('[DEBUG] Email already registered');
         return await sendAlreadyRegisteredEmail(params.email, origin);
     }
 
     const account = new db.Account(params);
-
     const isFirstAccount = (await db.Account.count()) === 0;
     account.role = isFirstAccount ? Role.Admin : Role.User;
     account.verificationToken = randomTokenString();
-
     account.passwordHash = await hash(params.password);
 
+    console.log('[DEBUG] Saving account to DB...');
     await account.save();
+    console.log('[DEBUG] Account saved to DB successfully.');
 
-    await sendVerificationEmail(account, origin);
+    console.log('[DEBUG] Sending verification email...');
+    try {
+        await sendVerificationEmail(account, origin);
+        console.log('[DEBUG] Verification email sent successfully.');
+    } catch (err) {
+        console.error('[DEBUG] Error sending email:', err);
+        throw err;
+    }
 }
 
 async function verifyEmail({ token }: any) {
