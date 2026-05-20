@@ -28,7 +28,7 @@ export default async function sendEmail({ to, subject, html, from }: any) {
         throw new Error(`Resend API error (${response.status}): ${errorBody}`);
     }
 
-    const result = await response.json();
+    const result = await response.json() as any;
     console.log('[EMAIL] Sent successfully via Resend. ID:', result.id);
     return result;
 }
