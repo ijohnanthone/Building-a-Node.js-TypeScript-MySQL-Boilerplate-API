@@ -1,6 +1,7 @@
 import config from '../config.json';
 import mysql from 'mysql2/promise';
 import { Sequelize } from 'sequelize';
+import fs from 'fs';
 import accountModel from '../accounts/account.model';
 import refreshTokenModel from '../accounts/refresh-token.model';
 
@@ -17,13 +18,26 @@ async function initialize() {
     const password = process.env.DB_PASSWORD || config.database.password;
     const database = process.env.DB_DATABASE || config.database.database;
 
+    // Prepare SSL options. Support DB_SSL_CA (base64) environment variable for Aiven/managed DBs.
+    let sslOptions: any = undefined;
+    if (host !== 'localhost') {
+        if (process.env.DB_SSL_CA) {
+            // DB_SSL_CA should be base64-encoded PEM content
+            const ca = Buffer.from(process.env.DB_SSL_CA, 'base64').toString('utf8');
+            sslOptions = { ca };
+        } else {
+            // fallback to permissive SSL (rejectUnauthorized=false)
+            sslOptions = { rejectUnauthorized: false };
+        }
+    }
+
     // 2. Create the connection
     const connection = await mysql.createConnection({
         host,
         port,
         user,
         password,
-        ssl: host !== 'localhost' ? { rejectUnauthorized: false } : undefined // Enable SSL for cloud DBs
+        ssl: sslOptions
     });
 
     // Create DB if it doesn't exist
@@ -35,9 +49,7 @@ async function initialize() {
         port,
         dialect: 'mysql',
         dialectOptions: host !== 'localhost' ? {
-            ssl: {
-                rejectUnauthorized: false
-            }
+            ssl: sslOptions
         } : undefined
     });
 
