@@ -1,23 +1,34 @@
-import nodemailer from 'nodemailer';
-import config from '../config.json';
-import dns from 'dns';
-
-// Force IPv4 for Render environments where IPv6 SMTP is unreachable
-dns.setDefaultResultOrder('ipv4first');
-
+// Uses Resend HTTP API (HTTPS port 443) - works on Render (no SMTP port blocks)
 export default async function sendEmail({ to, subject, html, from }: any) {
-    // Read from environment variables if set, otherwise fall back to config.json
-    const emailFrom = from || process.env.EMAIL_FROM || config.emailFrom;
+    const apiKey = process.env.RESEND_API_KEY;
 
-    const smtpOptions = {
-        host: process.env.SMTP_HOST || config.smtpOptions.host,
-        port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : config.smtpOptions.port,
-        auth: {
-            user: process.env.SMTP_USER || config.smtpOptions.auth.user,
-            pass: process.env.SMTP_PASS || config.smtpOptions.auth.pass
-        }
-    };
+    if (!apiKey) {
+        throw new Error('RESEND_API_KEY environment variable is not set');
+    }
 
-    const transporter = nodemailer.createTransport(smtpOptions);
-    await transporter.sendMail({ from: emailFrom, to, subject, html });
+    // Use verified sender or Resend's free test sender
+    const emailFrom = from || process.env.EMAIL_FROM || 'onboarding@resend.dev';
+
+    const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            from: emailFrom,
+            to: [to],
+            subject,
+            html
+        })
+    });
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Resend API error (${response.status}): ${errorBody}`);
+    }
+
+    const result = await response.json();
+    console.log('[EMAIL] Sent successfully via Resend. ID:', result.id);
+    return result;
 }

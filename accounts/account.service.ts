@@ -24,9 +24,27 @@ export default {
 };
 
 async function authenticate({ email, password, ipAddress }: any) {
+    console.log('[DEBUG AUTH] Starting authentication for:', email);
     const account = await db.Account.scope('withHash').findOne({ where: { email } });
+    console.log('[DEBUG AUTH] Account query finished. Account found:', !!account);
 
-    if (!account || !account.isVerified || !(await bcrypt.compare(password, account.passwordHash))) {
+    if (!account) {
+        console.log('[DEBUG AUTH] Account not found in database');
+        throw 'Email or password is incorrect';
+    }
+
+    console.log('[DEBUG AUTH] Checking isVerified. Value is:', account.isVerified);
+    if (!account.isVerified) {
+        console.log('[DEBUG AUTH] Account is not verified!');
+        throw 'Email or password is incorrect';
+    }
+
+    console.log('[DEBUG AUTH] Comparing passwords...');
+    const passwordMatch = await bcrypt.compare(password, account.passwordHash);
+    console.log('[DEBUG AUTH] Password comparison finished. Match:', passwordMatch);
+
+    if (!passwordMatch) {
+        console.log('[DEBUG AUTH] Password does not match');
         throw 'Email or password is incorrect';
     }
 
@@ -71,9 +89,8 @@ async function revokeToken({ token, ipAddress }: any) {
 }
 
 async function register(params: any, origin: any) {
-    console.log('[DEBUG] Starting register for:', params.email);
+    // If email already registered, send a reminder email
     if (await db.Account.findOne({ where: { email: params.email } })) {
-        console.log('[DEBUG] Email already registered');
         return await sendAlreadyRegisteredEmail(params.email, origin);
     }
 
@@ -83,18 +100,10 @@ async function register(params: any, origin: any) {
     account.verificationToken = randomTokenString();
     account.passwordHash = await hash(params.password);
 
-    console.log('[DEBUG] Saving account to DB...');
     await account.save();
-    console.log('[DEBUG] Account saved to DB successfully.');
 
-    console.log('[DEBUG] Sending verification email...');
-    try {
-        await sendVerificationEmail(account, origin);
-        console.log('[DEBUG] Verification email sent successfully.');
-    } catch (err) {
-        console.error('[DEBUG] Error sending email:', err);
-        throw err;
-    }
+    // Send verification email via Resend
+    await sendVerificationEmail(account, origin);
 }
 
 async function verifyEmail({ token }: any) {
@@ -110,12 +119,14 @@ async function verifyEmail({ token }: any) {
 async function forgotPassword({ email }: any, origin: any) {
     const account = await db.Account.findOne({ where: { email } });
 
+    // Silently return if account not found (prevents email enumeration)
     if (!account) return;
 
     account.resetToken = randomTokenString();
     account.resetTokenExpires = new Date(Date.now() + 24*60*60*1000);
     await account.save();
 
+    // Send password reset email via Resend
     await sendPasswordResetEmail(account, origin);
 }
 
