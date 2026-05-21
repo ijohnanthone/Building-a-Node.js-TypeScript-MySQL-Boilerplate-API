@@ -8,13 +8,13 @@
   
 },
   "secret": "SUPER_SECRET_KEY_REPLACE_ME_IN_PRODUCTION",
-  "emailFrom": "info@my-node-api.com",
+  "emailFrom": "no-reply@auth-boilerplate.com",
   "smtpOptions": {
-    "host": "smtp.ethereal.email",
-    "port": 587,
+    "host": "sandbox.smtp.mailtrap.io",
+    "port": 2525,
     "auth": {
-      "user": "javon21@ethereal.email",
-      "pass": "bpkjDByc8EZAXSruHV"
+      "user": "c486fee0686181",
+      "pass": "6afdc74342d53d"
     }
   }
 }
