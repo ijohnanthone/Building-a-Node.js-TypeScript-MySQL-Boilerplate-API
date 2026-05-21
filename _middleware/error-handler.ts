@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
 export default function errorHandler(err: any, req: Request, res: Response, next: NextFunction) {
+    console.error('[API ERROR]', err);
     switch (true) {
         case typeof err === 'string':
             const is404 = err.toLowerCase().endsWith('not found');
@@ -9,6 +10,6 @@ export default function errorHandler(err: any, req: Request, res: Response, next
         case err.name === 'UnauthorizedError':
             return res.status(401).json({ message: 'Unauthorized' });
         default:
-            return res.status(500).json({ message: err.message });
+            return res.status(500).json({ message: err.message || err });
     }
-}
+}
